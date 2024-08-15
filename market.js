@@ -151,7 +151,7 @@ app.get('/', async (req, res) => {
 
 app.get('/getLatestData', async (req, res) => {
   try {
-    if (latestData != null && latestData != ''){
+    if (latestData != null && latestData != {}){
       res.status(200).send({ message: 'Data fetched successfully', data: latestData, staus: 200 });
     } else {
       res.status(400).send({ message: 'Error fetching data', staus: 400 });
