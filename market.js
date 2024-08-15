@@ -178,11 +178,15 @@ app.post('/getLatestData', async (req, res) => {
     }
 
     // Check if latestData is not an empty object
-    // if (Object.keys(latestData).length > 0) {
+    if (OAUTH2.accessToken != '') {
       res.status(200).send({ message: 'Data fetched successfully', data: latestData, status: 200 });
-    // } else {
-      // res.status(400).send({ message: 'Error fetching data', status: 400 });
-    // }
+    } else if(subscribedMessage ==null || subscribedMessage == {}) {
+      res.status(400).send({ message: 'Please send correct parameters of subscribedMessage', status: 400 });
+    }else if (OAUTH2.accessToken == ''){
+      res.status(400).send({ message: 'Access Token Not Provided', status: 400 });
+    } else {
+      res.status(400).send({ message: 'Please contact admin', status: 400 });
+    }
   } catch (error) {
     console.error('An error occurred:', error.message);
     res.status(500).send('Failed to fetch latest data');
