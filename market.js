@@ -7,7 +7,6 @@ require('dotenv').config();
 
 const app = express();
 const HTTP_PORT = 3000; // Port for the HTTP server
-const WS_PORT = 4000; // Port for the WebSocket server
 
 app.use(express.json());
 
@@ -108,33 +107,10 @@ const decodeProtobuf = (buffer) => {
 };
 
 // Function to set up WebSocket server
-const setupWebSocketServer = () => {
-  webSocketServer = new WebSocket.Server({ port: WS_PORT }); // WebSocket server port
-
-  webSocketServer.on('connection', (socket) => {
-    console.log('New WebSocket client connected');
-    // Optionally send a welcome message or initial data to the new client
-    // socket.send(JSON.stringify({ message: 'Welcome to the WebSocket server!' }));
-  });
-
-  // This interval broadcasts latest data to all connected WebSocket clients every second
-  // setInterval(() => {
-  //   if (webSocketServer) {
-  //     webSocketServer.clients.forEach(client => {
-  //       if (client.readyState === WebSocket.OPEN) {
-  //         // Send updated data
-  //         // client.send(JSON.stringify({ timestamp: new Date(), data: latestData }));
-  //       }
-  //     });
-  //   }
-  // }, 1000); // Send updates every 1 second
-};
 
 // Function to initialize WebSocket connection and server
 const initializeWebSocket = async () => {
   await initProtobuf(); // Initialize protobuf
-  setupWebSocketServer(); // Set up WebSocket server
-
   // Connect WebSocket initially
   await connectWebSocket();
 };
@@ -171,11 +147,9 @@ app.post('/getLatestData', async (req, res) => {
     console.log('Extracted accessToken:', OAUTH2.accessToken);
 
     // Check and initialize WebSocket server if necessary
-    if (OAUTH2.accessToken) {
-      if (!webSocketServer) {
+      // if (!webSocketServer) {
         await initializeWebSocket();
-      }
-    }
+      // }
 
     // Check if latestData is not an empty object
     if (OAUTH2.accessToken != '') {
