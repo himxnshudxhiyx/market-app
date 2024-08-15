@@ -4,19 +4,23 @@ const protobuf = require('protobufjs');
 const UpstoxClient = require('upstox-js-sdk');
 require('dotenv').config();
 
+
 const app = express();
 const HTTP_PORT = 3000; // Port for the HTTP server
 const WS_PORT = 4000; // Port for the WebSocket server
+
+app.use(express.json());
 
 let protobufRoot = null;
 let defaultClient = UpstoxClient.ApiClient.instance;
 let apiVersion = '2.0';
 let OAUTH2 = defaultClient.authentications['OAUTH2'];
-OAUTH2.accessToken = process.env.AccessToken; // Your Upstox API token
+OAUTH2.accessToken = ''; // Your Upstox API token
 
 let wsClient = null; // WebSocket instance for Upstox
 let webSocketServer = null; // WebSocket server instance
 let latestData = {}; // Latest data to be sent to WebSocket clients
+let subscribedMessage = {}; // Latest data to be sent to WebSocket clients
 
 // Initialize Protobuf
 const initProtobuf = async () => {
@@ -56,15 +60,15 @@ const connectWebSocket = async () => {
       // Subscribe to the market data feed every second
       setInterval(() => {
         if (wsClient.readyState === WebSocket.OPEN) {
-          const subscribeMessage = {
-            guid: "someguid",
-            method: "sub",
-            data: {
-              mode: "full",
-              instrumentKeys: ["NSE_INDEX|Nifty Bank", "NSE_INDEX|Nifty 50"],
-            },
-          };
-          wsClient.send(Buffer.from(JSON.stringify(subscribeMessage)));
+          // const subscribeMessage = {
+          //   guid: "someguid",
+          //   method: "sub",
+          //   data: {
+          //     mode: "full",
+          //     instrumentKeys: ["NSE_INDEX|Nifty Bank", "NSE_INDEX|Nifty 50"],
+          //   },
+          // };
+          wsClient.send(Buffer.from(JSON.stringify(subscribedMessage)));
         }
       }, 1000); // Send subscription message every 1 second
     });
@@ -138,33 +142,55 @@ const initializeWebSocket = async () => {
 // HTTP route to check the status and WebSocket URL
 app.get('/', async (req, res) => {
   try {
-    if (!webSocketServer) {
-      await initializeWebSocket();
-    }
+    // if (!webSocketServer) {
+    //   await initializeWebSocket();
+    // }
     // Send the WebSocket server URL
-    res.send({ message: 'WebSocket connection started successfully' });
+    res.send({ message: 'Server Started' });
   } catch (error) {
     console.error('An error occurred:', error);
     res.status(500).send('Failed to start WebSocket connection');
   }
 });
 
-app.get('/getLatestData', async (req, res) => {
+app.post('/getLatestData', async (req, res) => {
   try {
-    // Check if latestData is an empty object
+    // Print the incoming request body for debugging
+    console.log('Request Body:', req.body);
+
+    // Safely extract parameters from the request body
+    if (req.body) {
+      subscribedMessage = req.body.subscribeMessage || {};
+      OAUTH2.accessToken = req.body.accessToken || '';
+    } else {
+      throw new Error('Request body is undefined');
+    }
+
+    // Print extracted values for debugging
+    console.log('Extracted subscribedMessage:', subscribedMessage);
+    console.log('Extracted accessToken:', OAUTH2.accessToken);
+
+    // Check and initialize WebSocket server if necessary
+    if (OAUTH2.accessToken) {
+      if (!webSocketServer) {
+        await initializeWebSocket();
+      }
+    }
+
+    // Check if latestData is not an empty object
     if (Object.keys(latestData).length > 0) {
       res.status(200).send({ message: 'Data fetched successfully', data: latestData, status: 200 });
     } else {
       res.status(400).send({ message: 'Error fetching data', status: 400 });
     }
   } catch (error) {
-    console.error('An error occurred:', error);
-    res.status(500).send('Failed to start WebSocket connection');
+    console.error('An error occurred:', error.message);
+    res.status(500).send('Failed to fetch latest data');
   }
 });
 
 // Start the HTTP server
 app.listen(HTTP_PORT, async () => {
-  await initializeWebSocket(); // Initialize WebSocket when the HTTP server starts
+  // await initializeWebSocket(); // Initialize WebSocket when the HTTP server starts
   console.log(`HTTP server running on http://localhost:${HTTP_PORT}`);
 });
