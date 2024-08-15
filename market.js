@@ -151,12 +151,12 @@ app.get('/', async (req, res) => {
 
 app.get('/getLatestData', async (req, res) => {
   try {
-    if (latestData != null && latestData != {}){
-      res.status(200).send({ message: 'Data fetched successfully', data: latestData, staus: 200 });
+    // Check if latestData is an empty object
+    if (Object.keys(latestData).length > 0) {
+      res.status(200).send({ message: 'Data fetched successfully', data: latestData, status: 200 });
     } else {
-      res.status(400).send({ message: 'Error fetching data', staus: 400 });
+      res.status(400).send({ message: 'Error fetching data', status: 400 });
     }
-    // Send the WebSocket server URL
   } catch (error) {
     console.error('An error occurred:', error);
     res.status(500).send('Failed to start WebSocket connection');
