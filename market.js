@@ -4,178 +4,146 @@ const protobuf = require('protobufjs');
 const UpstoxClient = require('upstox-js-sdk');
 require('dotenv').config();
 
-
 const app = express();
-const HTTP_PORT = 3000; // Port for the HTTP server
+const HTTP_PORT = 3000;
 
 app.use(express.json());
 
 let protobufRoot = null;
-let defaultClient = UpstoxClient.ApiClient.instance;
-let apiVersion = '2.0';
-let OAUTH2 = defaultClient.authentications['OAUTH2'];
-// OAUTH2.accessToken = ''; // Your Upstox API token
-OAUTH2.accesToken = process.env.AccessToken;
+let wsClient = null;
+let latestData = {};
+let subscribedMessage = {};
+let webSocketInitialized = false;
 
-let wsClient = null; // WebSocket instance for Upstox
-let webSocketServer = null; // WebSocket server instance
-let latestData = {}; // Latest data to be sent to WebSocket clients
-let subscribedMessage = {}; // Latest data to be sent to WebSocket clients
+const defaultClient = UpstoxClient.ApiClient.instance;
+const apiVersion = '2.0';
+const OAUTH2 = defaultClient.authentications['OAUTH2'];
+OAUTH2.accessToken = process.env.AccessToken;
 
 // Initialize Protobuf
 const initProtobuf = async () => {
-  protobufRoot = await protobuf.load(__dirname + '/MarketDataFeed.proto');
-  console.log('Protobuf part initialization complete');
+  try {
+    protobufRoot = await protobuf.load(`${__dirname}/MarketDataFeed.proto`);
+    console.log('Protobuf initialized');
+  } catch (error) {
+    console.error('Failed to initialize Protobuf:', error);
+  }
 };
 
-// Function to authorize and get WebSocket URL
-const getMarketFeedUrl = async () => {
+// Get WebSocket URL from Upstox API
+const getMarketFeedUrl = () => {
   return new Promise((resolve, reject) => {
-    let apiInstance = new UpstoxClient.WebsocketApi();
+    const apiInstance = new UpstoxClient.WebsocketApi();
     apiInstance.getMarketDataFeedAuthorize(apiVersion, (error, data) => {
       if (error) {
-        reject(error);
-      } else {
-        resolve(data.data.authorizedRedirectUri);
+        return reject(error);
       }
+      resolve(data.data.authorizedRedirectUri);
     });
   });
 };
 
-// Function to connect to WebSocket and listen for data
+// Connect to Upstox WebSocket and listen for data
 const connectWebSocket = async () => {
   try {
-    const wsUrl = await getMarketFeedUrl(); // Get WebSocket URL
-    console.log(wsUrl);
-    console.log(OAUTH2.accessToken);
-    console.log("URL AND TOKEN");
+    const wsUrl = await getMarketFeedUrl();
+
     wsClient = new WebSocket(wsUrl, {
       headers: {
         'Api-Version': apiVersion,
-        Authorization: 'Bearer ' + OAUTH2.accessToken,
+        Authorization: `Bearer ${OAUTH2.accessToken}`,
       },
       followRedirects: true,
     });
 
     wsClient.on('open', () => {
       console.log('Connected to Upstox WebSocket');
-
-      // Subscribe to the market data feed every second
-
-        if (wsClient.readyState === WebSocket.OPEN) {
-          // const subscribeMessage = {
-          //   guid: "someguid",
-          //   method: "sub",
-          //   data: {
-          //     mode: "full",
-          //     instrumentKeys: ["NSE_INDEX|Nifty Bank", "NSE_INDEX|Nifty 50"],
-          //   },
-          // };
-          webSocketServer =true;
-          wsClient.send(Buffer.from(JSON.stringify(subscribedMessage)));
-          console.log("Senttttttttt");
-        }
+      webSocketInitialized = true;
+      subscribeToMarketData();
     });
 
     wsClient.on('message', (data) => {
-      console.log(decodeProtobuf(data));
-      console.log("Data from WebSocket");
-      latestData = decodeProtobuf(data); // Decode and update the latest data
-      // if (webSocketServer) {
-      //   webSocketServer.clients.forEach(client => {
-      //     if (client.readyState === WebSocket.OPEN) {
-      //       // Send updated data
-      //       // client.send(JSON.stringify({ timestamp: new Date(), data: latestData }));
-      //     }
-      //   });
-      // }
+      latestData = decodeProtobuf(data);
+      console.log('Received data from WebSocket:', latestData);
     });
 
     wsClient.on('error', (error) => {
-      console.error('Upstox WebSocket error:', error);
+      console.error('WebSocket error:', error);
     });
 
     wsClient.on('close', () => {
-      console.log('Upstox WebSocket connection closed');
+      console.log('WebSocket connection closed');
+      webSocketInitialized = false;
     });
   } catch (error) {
-    console.error('Error connecting to WebSocket:', error);
+    console.error('Failed to connect to WebSocket:', error);
   }
 };
 
-// Function to decode Protobuf messages
+// Subscribe to market data feed
+const subscribeToMarketData = () => {
+  if (wsClient.readyState === WebSocket.OPEN && subscribedMessage) {
+    wsClient.send(Buffer.from(JSON.stringify(subscribedMessage)));
+    console.log('Subscribed to market data feed');
+  }
+};
+
+// Decode Protobuf messages
 const decodeProtobuf = (buffer) => {
   if (!protobufRoot) {
-    console.warn('Protobuf part not initialized yet!');
+    console.warn('Protobuf not initialized');
     return null;
   }
   const FeedResponse = protobufRoot.lookupType('com.upstox.marketdatafeeder.rpc.proto.FeedResponse');
   return FeedResponse.decode(buffer);
 };
 
-// Function to set up WebSocket server
-
-// Function to initialize WebSocket connection and server
+// Initialize WebSocket connection and Protobuf
 const initializeWebSocket = async () => {
-  await initProtobuf(); // Initialize protobuf
-  // Connect WebSocket initially
+  await initProtobuf();
   await connectWebSocket();
 };
 
-// HTTP route to check the status and WebSocket URL
+// HTTP route to start WebSocket connection
 app.get('/', async (req, res) => {
   try {
-    if (!webSocketServer) {
+    if (!webSocketInitialized) {
       await initializeWebSocket();
     }
-    // Send the WebSocket server URL
-    res.send({ message: 'Server Started' });
+    res.send({ message: 'WebSocket connection started' });
   } catch (error) {
-    console.error('An error occurred:', error);
-    res.status(500).send('Failed to start WebSocket connection');
+    console.error('Failed to start WebSocket connection:', error);
+    res.status(500).send('Error initializing WebSocket');
   }
 });
 
+// HTTP route to get the latest data
 app.post('/getLatestData', async (req, res) => {
   try {
-    // Print the incoming request body for debugging
-    console.log('Request Body:', req.body);
+    subscribedMessage = req.body.subscribeMessage || {};
 
-    // Safely extract parameters from the request body
-    // if (req.body) {
-      subscribedMessage = req.body.subscribeMessage || {};
-      // OAUTH2.accessToken = req.body.accessToken || '';
-    // } else {
-      // throw new Error('Request body is undefined');
-    // }
-
-    // Print extracted values for debugging
-    console.log('Extracted subscribedMessage:', subscribedMessage);
-    console.log('Extracted accessToken:', OAUTH2.accessToken);
-
-    // Check and initialize WebSocket server if necessary
-    if (webSocketServer == false) {
-    await initializeWebSocket();
+    if (!webSocketInitialized) {
+      await initializeWebSocket();
     }
 
-    // Check if latestData is not an empty object
-    if (OAUTH2.accessToken != '') {
-      res.status(200).send({ message: 'Data fetched successfully', data: latestData, accesToken: OAUTH2.accessToken, subscribedMessage: subscribedMessage, status: 200 });
-    } else if (subscribedMessage == null || subscribedMessage == {}) {
-      res.status(400).send({ message: 'Please send correct parameters of subscribedMessage', status: 400 });
-    } else if (OAUTH2.accessToken == '') {
-      res.status(400).send({ message: 'Access Token Not Provided', accesToken: OAUTH2.accessToken, subscribedMessage: subscribedMessage, status: 400 });
+    if (OAUTH2.accessToken) {
+      res.status(200).send({
+        message: 'Data fetched successfully',
+        data: latestData,
+        accessToken: OAUTH2.accessToken,
+        subscribedMessage,
+        status: 200,
+      });
     } else {
-      res.status(400).send({ message: 'Please contact admin', status: 400 });
+      res.status(400).send({ message: 'Access Token Not Provided', status: 400 });
     }
   } catch (error) {
-    console.error('An error occurred:', error.message);
-    res.status(500).send('Failed to fetch latest data');
+    console.error('Failed to fetch latest data:', error);
+    res.status(500).send('Error fetching data');
   }
 });
 
 // Start the HTTP server
-app.listen(HTTP_PORT, async () => {
-  // await initializeWebSocket(); // Initialize WebSocket when the HTTP server starts
+app.listen(HTTP_PORT, () => {
   console.log(`HTTP server running on http://localhost:${HTTP_PORT}`);
 });
