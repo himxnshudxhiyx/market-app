@@ -18,7 +18,7 @@ let webSocketInitialized = false;
 const defaultClient = UpstoxClient.ApiClient.instance;
 const apiVersion = '2.0';
 const OAUTH2 = defaultClient.authentications['OAUTH2'];
-OAUTH2.accessToken = process.env.AccessToken;
+OAUTH2.accessToken = null;
 
 // Initialize Protobuf
 const initProtobuf = async () => {
@@ -121,6 +121,7 @@ app.get('/', async (req, res) => {
 app.post('/getLatestData', async (req, res) => {
   try {
     subscribedMessage = req.body.subscribeMessage || {};
+    OAUTH2.accessToken = req.body.accessToken || '';
 
     if (!webSocketInitialized) {
       await initializeWebSocket();
