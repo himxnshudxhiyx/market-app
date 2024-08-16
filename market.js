@@ -140,6 +140,7 @@ app.post('/getLatestData', async (req, res) => {
         subscribedMessage,
         status: 200,
       });
+      latestData = {};
     } else {
       res.status(400).send({ message: 'Access Token Not Provided', status: 400 });
     }
