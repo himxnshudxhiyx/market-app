@@ -18,7 +18,7 @@ let OAUTH2 = defaultClient.authentications['OAUTH2'];
 OAUTH2.accesToken = process.env.AccessToken;
 
 let wsClient = null; // WebSocket instance for Upstox
-let webSocketServer = false; // WebSocket server instance
+let webSocketServer = null; // WebSocket server instance
 let latestData = {}; // Latest data to be sent to WebSocket clients
 let subscribedMessage = {}; // Latest data to be sent to WebSocket clients
 
@@ -46,6 +46,9 @@ const getMarketFeedUrl = async () => {
 const connectWebSocket = async () => {
   try {
     const wsUrl = await getMarketFeedUrl(); // Get WebSocket URL
+    console.log(wsUrl);
+    console.log(OAUTH2.accessToken);
+    console.log("URL AND TOKEN");
     wsClient = new WebSocket(wsUrl, {
       headers: {
         'Api-Version': apiVersion,
