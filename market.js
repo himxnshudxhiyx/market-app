@@ -57,7 +57,7 @@ const connectWebSocket = async () => {
       console.log('Connected to Upstox WebSocket');
 
       // Subscribe to the market data feed every second
-      setInterval(() => {
+
         if (wsClient.readyState === WebSocket.OPEN) {
           // const subscribeMessage = {
           //   guid: "someguid",
@@ -68,8 +68,8 @@ const connectWebSocket = async () => {
           //   },
           // };
           wsClient.send(Buffer.from(JSON.stringify(subscribedMessage)));
+          console.log("Senttttttttt");
         }
-      }, 1000); // Send subscription message every 1 second
     });
 
     wsClient.on('message', (data) => {
