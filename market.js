@@ -141,7 +141,7 @@ app.post('/getLatestData', async (req, res) => {
           subscribedMessage,
           status: 200,
         });
-      }, 200); // 2000 milliseconds = 2 seconds
+      }, 300); // 2000 milliseconds = 2 seconds
     } else {
       res.status(400).send({ message: 'Access Token Not Provided', status: 400 });
     }
