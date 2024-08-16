@@ -59,11 +59,13 @@ const connectWebSocket = async () => {
     wsClient.on('open', () => {
       console.log('Connected to Upstox WebSocket');
       webSocketInitialized = true;
-      setInterval(subscribeToMarketData, 500);
+      subscribeToMarketData();
+      // setInterval(subscribeToMarketData, 500);
     });
 
     wsClient.on('message', (data) => {
       latestData = decodeProtobuf(data);
+      wsClient.close();
       console.log('Received data from WebSocket:', latestData);
     });
 
@@ -82,10 +84,10 @@ const connectWebSocket = async () => {
 
 // Subscribe to market data feed
 const subscribeToMarketData = () => {
-  if (wsClient.readyState === WebSocket.OPEN && subscribedMessage) {
+  // if (wsClient.readyState === WebSocket.OPEN && subscribedMessage) {
     wsClient.send(Buffer.from(JSON.stringify(subscribedMessage)));
     console.log('Subscribed to market data feed');
-  }
+  // }
 };
 
 // Decode Protobuf messages
@@ -108,6 +110,7 @@ const initializeWebSocket = async () => {
 app.get('/', async (req, res) => {
   try {
     if (!webSocketInitialized) {
+      wsClient.close();
       await initializeWebSocket();
     }
     res.send({ message: 'WebSocket connection started' });
@@ -122,7 +125,8 @@ app.post('/getLatestData', async (req, res) => {
   try {
     subscribedMessage = req.body.subscribeMessage || {};
     OAUTH2.accessToken = req.body.accessToken || '';
-
+    
+    console.log(subscribedMessage);
     if (!webSocketInitialized) {
       await initializeWebSocket();
     }
