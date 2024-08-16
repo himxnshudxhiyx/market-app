@@ -36,6 +36,7 @@ const getMarketFeedUrl = () => {
     const apiInstance = new UpstoxClient.WebsocketApi();
     apiInstance.getMarketDataFeedAuthorize(apiVersion, (error, data) => {
       if (error) {
+        latestData = {};
         return reject(error);
       }
       resolve(data.data.authorizedRedirectUri);
@@ -59,7 +60,7 @@ const connectWebSocket = async () => {
     wsClient.on('open', () => {
       console.log('Connected to Upstox WebSocket');
       webSocketInitialized = true;
-      setInterval(subscribeToMarketData, 1000);
+      setInterval(subscribeToMarketData, 100);
     });
 
     wsClient.on('message', (data) => {
