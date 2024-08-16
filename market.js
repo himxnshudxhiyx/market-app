@@ -147,17 +147,17 @@ app.post('/getLatestData', async (req, res) => {
     console.log('Extracted accessToken:', OAUTH2.accessToken);
 
     // Check and initialize WebSocket server if necessary
-      // if (!webSocketServer) {
-        await initializeWebSocket();
-      // }
+    // if (!webSocketServer) {
+    await initializeWebSocket();
+    // }
 
     // Check if latestData is not an empty object
     if (OAUTH2.accessToken != '') {
-      res.status(200).send({ message: 'Data fetched successfully', data: latestData, status: 200 });
-    } else if(subscribedMessage ==null || subscribedMessage == {}) {
+      res.status(200).send({ message: 'Data fetched successfully', data: latestData, accesToken: OAUTH2.accessToken, subscribedMessage: subscribedMessage, status: 200 });
+    } else if (subscribedMessage == null || subscribedMessage == {}) {
       res.status(400).send({ message: 'Please send correct parameters of subscribedMessage', status: 400 });
-    }else if (OAUTH2.accessToken == ''){
-      res.status(400).send({ message: 'Access Token Not Provided', status: 400 });
+    } else if (OAUTH2.accessToken == '') {
+      res.status(400).send({ message: 'Access Token Not Provided', accesToken: OAUTH2.accessToken, subscribedMessage: subscribedMessage, status: 400 });
     } else {
       res.status(400).send({ message: 'Please contact admin', status: 400 });
     }
