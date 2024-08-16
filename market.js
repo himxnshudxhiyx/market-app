@@ -59,8 +59,7 @@ const connectWebSocket = async () => {
     wsClient.on('open', () => {
       console.log('Connected to Upstox WebSocket');
       webSocketInitialized = true;
-      subscribeToMarketData();
-      // setInterval(subscribeToMarketData, 500);
+      setInterval(subscribeToMarketData, 1000);
     });
 
     wsClient.on('message', (data) => {
@@ -86,10 +85,10 @@ const connectWebSocket = async () => {
 
 // Subscribe to market data feed
 const subscribeToMarketData = () => {
-  // if (wsClient.readyState === WebSocket.OPEN && subscribedMessage) {
+  if (wsClient.readyState === WebSocket.OPEN) {
     wsClient.send(Buffer.from(JSON.stringify(subscribedMessage)));
     console.log('Subscribed to market data feed');
-  // }
+  }
 };
 
 // Decode Protobuf messages
