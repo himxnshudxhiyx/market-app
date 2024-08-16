@@ -59,7 +59,7 @@ const connectWebSocket = async () => {
     wsClient.on('open', () => {
       console.log('Connected to Upstox WebSocket');
       webSocketInitialized = true;
-      subscribeToMarketData();
+      setInterval(subscribeToMarketData, 500);
     });
 
     wsClient.on('message', (data) => {
