@@ -112,7 +112,6 @@ const initializeWebSocket = async () => {
 app.get('/', async (req, res) => {
   try {
     if (!webSocketInitialized) {
-      wsClient.close();
       await initializeWebSocket();
     }
     res.send({ message: 'WebSocket connection started' });
