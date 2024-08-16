@@ -73,6 +73,8 @@ const connectWebSocket = async () => {
     });
 
     wsClient.on('message', (data) => {
+      console.log(decodeProtobuf(data));
+      console.log("Data from WebSocket");
       latestData = decodeProtobuf(data); // Decode and update the latest data
       // if (webSocketServer) {
       //   webSocketServer.clients.forEach(client => {
