@@ -133,14 +133,15 @@ app.post('/getLatestData', async (req, res) => {
     }
 
     if (OAUTH2.accessToken) {
-      res.status(200).send({
-        message: 'Data fetched successfully',
-        data: latestData,
-        accessToken: OAUTH2.accessToken,
-        subscribedMessage,
-        status: 200,
-      });
-      latestData = {};
+      setTimeout(() => {
+        res.status(200).send({
+          message: 'Data fetched successfully',
+          data: latestData,
+          accessToken: OAUTH2.accessToken,
+          subscribedMessage,
+          status: 200,
+        });
+      }, 200); // 2000 milliseconds = 2 seconds
     } else {
       res.status(400).send({ message: 'Access Token Not Provided', status: 400 });
     }
