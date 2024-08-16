@@ -17,7 +17,7 @@ let OAUTH2 = defaultClient.authentications['OAUTH2'];
 OAUTH2.accessToken = ''; // Your Upstox API token
 
 let wsClient = null; // WebSocket instance for Upstox
-let webSocketServer = null; // WebSocket server instance
+let webSocketServer = false; // WebSocket server instance
 let latestData = {}; // Latest data to be sent to WebSocket clients
 let subscribedMessage = {}; // Latest data to be sent to WebSocket clients
 
@@ -67,6 +67,7 @@ const connectWebSocket = async () => {
           //     instrumentKeys: ["NSE_INDEX|Nifty Bank", "NSE_INDEX|Nifty 50"],
           //   },
           // };
+          webSocketServer =true;
           wsClient.send(Buffer.from(JSON.stringify(subscribedMessage)));
           console.log("Senttttttttt");
         }
@@ -149,9 +150,9 @@ app.post('/getLatestData', async (req, res) => {
     console.log('Extracted accessToken:', OAUTH2.accessToken);
 
     // Check and initialize WebSocket server if necessary
-    // if (!webSocketServer) {
+    if (webSocketServer == false) {
     await initializeWebSocket();
-    // }
+    }
 
     // Check if latestData is not an empty object
     if (OAUTH2.accessToken != '') {
