@@ -14,7 +14,8 @@ let protobufRoot = null;
 let defaultClient = UpstoxClient.ApiClient.instance;
 let apiVersion = '2.0';
 let OAUTH2 = defaultClient.authentications['OAUTH2'];
-OAUTH2.accessToken = ''; // Your Upstox API token
+// OAUTH2.accessToken = ''; // Your Upstox API token
+OAUTH2.accesToken = process.env.AccessToken;
 
 let wsClient = null; // WebSocket instance for Upstox
 let webSocketServer = false; // WebSocket server instance
@@ -121,9 +122,9 @@ const initializeWebSocket = async () => {
 // HTTP route to check the status and WebSocket URL
 app.get('/', async (req, res) => {
   try {
-    // if (!webSocketServer) {
-    //   await initializeWebSocket();
-    // }
+    if (!webSocketServer) {
+      await initializeWebSocket();
+    }
     // Send the WebSocket server URL
     res.send({ message: 'Server Started' });
   } catch (error) {
@@ -138,12 +139,12 @@ app.post('/getLatestData', async (req, res) => {
     console.log('Request Body:', req.body);
 
     // Safely extract parameters from the request body
-    if (req.body) {
+    // if (req.body) {
       subscribedMessage = req.body.subscribeMessage || {};
-      OAUTH2.accessToken = req.body.accessToken || '';
-    } else {
-      throw new Error('Request body is undefined');
-    }
+      // OAUTH2.accessToken = req.body.accessToken || '';
+    // } else {
+      // throw new Error('Request body is undefined');
+    // }
 
     // Print extracted values for debugging
     console.log('Extracted subscribedMessage:', subscribedMessage);
