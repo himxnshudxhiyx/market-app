@@ -65,7 +65,9 @@ const connectWebSocket = async () => {
 
     wsClient.on('message', (data) => {
       latestData = decodeProtobuf(data);
-      wsClient.close();
+      if(webSocketInitialized == true) {
+        wsClient.close();
+      }
       console.log('Received data from WebSocket:', latestData);
     });
 
