@@ -12,6 +12,7 @@ app.use(express.json());
 let protobufRoot = null;
 let wsClient = null;
 let latestData = {};
+let errorDetails = {};
 let subscribedMessage = {};
 let webSocketInitialized = false;
 
@@ -37,8 +38,10 @@ const getMarketFeedUrl = () => {
     apiInstance.getMarketDataFeedAuthorize(apiVersion, (error, data) => {
       if (error) {
         latestData = {};
+        errorDetails = error;
         return reject(error);
       }
+      errorDetails = {};
       resolve(data.data.authorizedRedirectUri);
     });
   });
@@ -58,12 +61,14 @@ const connectWebSocket = async () => {
     });
 
     wsClient.on('open', () => {
+      errorDetails = {};
       console.log('Connected to Upstox WebSocket');
       webSocketInitialized = true;
       setInterval(subscribeToMarketData, 1);
     });
 
     wsClient.on('message', (data) => {
+      errorDetails = {};
       latestData = decodeProtobuf(data);
       if(webSocketInitialized == true) {
         wsClient.close();
@@ -72,6 +77,8 @@ const connectWebSocket = async () => {
     });
 
     wsClient.on('error', (error) => {
+      errorDetails = {};
+      errorDetails = error;
       console.error('WebSocket error:', error);
     });
 
@@ -132,7 +139,7 @@ app.post('/getLatestData', async (req, res) => {
       await initializeWebSocket();
     }
 
-    if (OAUTH2.accessToken) {
+    if (OAUTH2.accessToken && errorDetails == {}) {
       setTimeout(() => {
         res.status(200).send({
           message: 'Data fetched successfully',
@@ -142,8 +149,10 @@ app.post('/getLatestData', async (req, res) => {
           status: 200,
         });
       }, 300); // 2000 milliseconds = 2 seconds
-    } else {
-      res.status(400).send({ message: 'Access Token Not Provided', status: 400 });
+    } else if (errorDetails != {}){
+      res.status(errorDetails['status']).send({ message: 'Error Fetchhing Data', data: errorDetails, status: errorDetails['status'] });
+    }else {
+      res.status(400).send({ message: 'Error Fetchhing Data', status: 400 });
     }
   } catch (error) {
     console.error('Failed to fetch latest data:', error);
