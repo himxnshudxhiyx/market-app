@@ -12,7 +12,7 @@ app.use(express.json());
 let protobufRoot = null;
 let wsClient = null;
 let latestData = {};
-let errorDetails = {};
+let errorDetails = null;
 let subscribedMessage = {};
 let webSocketInitialized = false;
 
@@ -41,7 +41,7 @@ const getMarketFeedUrl = () => {
         errorDetails = error;
         return reject(error);
       }
-      errorDetails = {};
+      errorDetails = null;
       resolve(data.data.authorizedRedirectUri);
     });
   });
@@ -61,14 +61,14 @@ const connectWebSocket = async () => {
     });
 
     wsClient.on('open', () => {
-      errorDetails = {};
+      errorDetails = null;
       console.log('Connected to Upstox WebSocket');
       webSocketInitialized = true;
       setInterval(subscribeToMarketData, 1);
     });
 
     wsClient.on('message', (data) => {
-      errorDetails = {};
+      errorDetails = null;
       latestData = decodeProtobuf(data);
       if(webSocketInitialized == true) {
         wsClient.close();
@@ -77,7 +77,7 @@ const connectWebSocket = async () => {
     });
 
     wsClient.on('error', (error) => {
-      errorDetails = {};
+      errorDetails = null;
       errorDetails = error;
       console.error('WebSocket error:', error);
     });
@@ -134,12 +134,16 @@ app.post('/getLatestData', async (req, res) => {
     subscribedMessage = req.body.subscribeMessage || {};
     OAUTH2.accessToken = req.body.accessToken || '';
     
-    console.log(subscribedMessage);
+    console.log('Subscribed Message:', subscribedMessage);
+    
     if (!webSocketInitialized) {
+      console.log('Initializing WebSocket...');
       await initializeWebSocket();
     }
 
-    if (OAUTH2.accessToken && errorDetails == {}) {
+    console.log("WHAT IS THIS::::", errorDetails == null);
+    if (OAUTH2.accessToken && errorDetails == null) {
+      console.log('Fetching data with access token...');
       setTimeout(() => {
         res.status(200).send({
           message: 'Data fetched successfully',
@@ -148,17 +152,24 @@ app.post('/getLatestData', async (req, res) => {
           subscribedMessage,
           status: 200,
         });
-      }, 300); // 2000 milliseconds = 2 seconds
-    } else if (errorDetails != {}){
-      res.status(errorDetails['status']).send({ message: 'Error Fetchhing Data', data: errorDetails, status: errorDetails['status'] });
-    }else {
-      res.status(400).send({ message: 'Error Fetchhing Data', status: 400 });
+      }, 300); // 300 milliseconds
+    } else {
+      res.status(400).send({
+        message: 'Error Fetching Data',
+        error: errorDetails,
+        status: 400,
+      });
     }
   } catch (error) {
-    console.error('Failed to fetch latest data:', error);
-    res.status(500).send('Error fetching data');
+    // Log the error stack to find where it came from
+    console.error('Failed to fetch latest data:', error.stack || error);
+    res.status(500).send({
+      message: 'Error fetching data',
+      error: error.message || error,
+    });
   }
 });
+
 
 // Start the HTTP server
 app.listen(HTTP_PORT, () => {
